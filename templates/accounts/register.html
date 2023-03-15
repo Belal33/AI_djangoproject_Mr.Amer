@@ -1,0 +1,12 @@
+{% extends 'base.html' %} 
+{% block body %}
+  
+  <form method = "POST">
+    {% csrf_token %}
+    {{form.as_p}}
+
+    <input type = "submit" value = "SignUP" />
+  </form>
+  <p><a href = " {% url 'login' %} "> Already have an account? <a></p>
+    
+{% endblock body %}
