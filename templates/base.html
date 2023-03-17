@@ -11,13 +11,25 @@
 </head>
 <body>
     <div style="color:white" class="page">
+          <header>
+      <div class="container">
+        <div class="logo">
+          <span class="g"> g</span>
+          <span class="6">  6</span>        
+        </div>
+        <ul>
+          <li></li>
+          <li></li>
+          <li></li>
+        </ul>
 
+      </div><!--end container-->
+    </header>
+      {% block body %}
 
-        <h1>Chat With Our AI</h1>
-          {% block body %}
           
-          {% endblock body %}
-          <script src="{% static 'main.js' %}"></script> 
-    </div>
+      {% endblock body %}
+      </div>
+      <script src="{% static 'main.js' %}"></script> 
 </body>
 </html>

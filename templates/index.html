@@ -2,35 +2,46 @@
 
 
   {% block body %}
-        <div class="content">
-          {% if user.is_authenticated %}
-            <form  action="" method="POST">
-              {% csrf_token %}
-              <input placeholder="Enter your question here" type="text" name="prompt" class = "prompt-input">
-              <input type = "submit" value="GO"/>
-            </form> 
-            
-            <div class=" response">
-              {{res}}
-            </div>
-          {% else %}
-            <div 
-              class="require" 
-              style ="
-                width:fit-content;
-                margin: 50px auto;
-                font-size:30px;
-                color:white;
-              "
-              >
-              <a href="{% url 'sinup' %}" style ="color:#25ae88;">SinUp</a>
-              Or 
-              <a href="{% url 'login' %}" style ="color:#25ae88;">Login</a> 
-              If You Have An Account
-            </div>
-          {% endif %}
-        </div>
+<section class="chat-ai">
+
+  <h1>Chat With Our AI</h1>
+  <div class="container">
+      
+    {% if user.is_authenticated %}
+      <form  action="" method="POST">
+        {% csrf_token %}
+        <input placeholder="Enter your question here" type="text" name="prompt" class = "prompt-input">
+        <input type = "submit" value="GO"/>
+      </form> 
+      
+      <div class=" response">
+        {{res}}
+      </div> <!-- end response -->
+    {% else %}
+        <div 
+        class="require" 
+        style ="
+          width:fit-content;
+          margin: 50px auto;
+          font-size:30px;
+          color:white;
+        "
+        >
+        <a href="{% url 'sinup' %}" style ="color:#25ae88;">SinUp</a>
+        Or 
+        <a href="{% url 'login' %}" style ="color:#25ae88;">Login</a> 
+        If You Have An Account
+      </div>
+    {% endif %}
+
+  </div> <!-- end container -->
+
+</section>
         
   {% endblock body %}
+
+
+
+
 
 
