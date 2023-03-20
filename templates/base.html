@@ -2,34 +2,19 @@
 
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="{% static 'style.css' %}">
-  <title>ChatAI</title>
-</head>
-<body>
-    <div style="color:white" class="page">
-          <header>
-      <div class="container">
-        <div class="logo">
-          <span class="g"> g</span>
-          <span class="6">  6</span>        
-        </div>
-        <ul>
-          <li></li>
-          <li></li>
-          <li></li>
-        </ul>
-
-      </div><!--end container-->
-    </header>
-      {% block body %}
-
-          
-      {% endblock body %}
-      </div>
-      <script src="{% static 'main.js' %}"></script> 
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+    <title>ChatAI</title>
+  </head>
+  <body>
+    <div class="page">
+      <!-- *****start body content****** -->
+      {% block body %} {% endblock body %}
+      <!--******** end body content ******-->
+    </div>
+    <script src="{% static 'js/main.js' %}"></script>
+  </body>
 </html>

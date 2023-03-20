@@ -6,7 +6,7 @@ from .views import CustomRegister,CustomLoginVeiw
 
 
 urlpatterns = [
-  path("register/",CustomRegister.as_view(),name="sinup"),
+  path("register/",CustomRegister.as_view(),name="signup"),
   path("login/",CustomLoginVeiw.as_view(),name="login"),
   path('user-logout/',LogoutView.as_view(next_page = 'home'), name= 'logout' ),
 ]

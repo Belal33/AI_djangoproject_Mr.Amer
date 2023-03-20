@@ -1,18 +1,15 @@
-{% extends 'base.html' %} 
-{% block body %}
-<section>
+{% extends 'base.html' %} {% block body %}
+<section class="sinup-page">
   <div class="container">
+    <form method="POST">
+      {% csrf_token %} {{form}}
 
-    <form method = "POST">
-      {% csrf_token %}
-      {{form}}
-
-      
-      <input type = "submit" value = "Login" />
+      <input type="submit" value="Login" />
     </form>
-    
-    <p style="margin: 20px;"><a href = " {% url 'login' %} "> Already have an account?</a></p>
+    <a href=" {% url 'login' %}" class="have-account">
+      Already have an account?</a
+    >
   </div>
-</section> 
+  <!-- end container -->
+</section>
 {% endblock body %}
-
