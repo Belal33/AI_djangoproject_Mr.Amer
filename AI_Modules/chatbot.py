@@ -3,199 +3,81 @@ import datetime
 import tiktoken
 import time
 
-def tokens_calc(string, encoding = tiktoken.get_encoding("cl100k_base")):
-    encoded_string = encoding.encode(string)
-    tokens = [encoding.decode([token]) for token in encoded_string]
-    embeddings = [0] * len(tokens)
-    for i in range(len(tokens)):
-        response = openai.Embedding.create(input=tokens[i], model="text-embedding-ada-002")
-        embeddings[i] = response["data"][0]["embedding"]
-    return len(embeddings)
+def gpt3_tokens_calc(argument, chat= False, encoding = tiktoken.get_encoding("cl100k_base")):
+    if chat:
+        num_tokens = 0
+        for message in argument:
+            num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+            for key, value in message.items():
+                num_tokens += len(encoding.encode(value))
+                if key == "name":  # if there's a name, the role is omitted
+                    num_tokens += -1  # role is always required and always 1 token
+        num_tokens += 2  # every reply is primed with <im_start>assistant
+        return num_tokens + 1
+    elif not chat:
+        encoded_string = encoding.encode(argument)
+        tokens = [encoding.decode([token]) for token in encoded_string]
+        return len(tokens)
 
-class GPT():
-    def __init__(self, chat=True):
-        self.__initialization_time = datetime.datetime.now()
-        self.chat = chat
-        # model's parameters
-        self.__max_tokens_returned_to_model = 500
-        self.__model = "gpt-3.5-turbo"
-        self.__temperature = 1
-        self.__max_generated_tokens = 1000
-        self.__presence_penalty = 0
-        #self.user_id = "0000"
-        
-        self.messages_data = {
-            "initialization_time": self.__initialization_time,
-            "system_messages": {"messages": [], "n_tokens": []},
-            "chat_messages": {"messages": [], "role": [], "n_tokens": [], "message_time": []},
-            "n_returned_messages": [],
-            "prompt_tokens": [],
-            "completion_tokens": [],
-            "total_tokens": [],
-            "finish_reason": []
+def get_gpt_chat_response(msgs,
+                        user_id,
+                        model = "gpt-3.5-turbo",
+                        temperature = 1,  
+                        stream = True,
+                        max_tokens = 500):
+    
+    max_prompt_tokens = 500
+    prompt_tokens = 0
+    chat_msg_returned = False
+    msgs = []
+    for msg, role in msgs:
+        if role == "system":
+            msgs.insert(0, {"role": role, "content": msg})
+        if role == "assistant":
+            if not chat_msg_returned:
+                msgs.insert(1, {"role": role, "content": msg})
+                chat_msg_returned = True
+        if role == "user":
+            msgs.insert(1, {"role": role, "content": msg})
+        prompt_tokens = gpt3_tokens_calc(msgs, chat= True)
+        if prompt_tokens >= max_tokens_returned_to_model:
+            break
+    n_prompt_messages = len(msgs)
+    
+    def chat_req():
+        n_trys += 1
+        return openai.ChatCompletion.create(model = model,
+                                            messages = msgs,
+                                            temperature = temperature,
+                                            max_tokens = max_tokens,
+                                            stream = stream,
+                                            user = user_id,
+                                           )
+    
+    n_trys = 0
+    req_time = datetime.datetime.now()
+    try:
+        res = chat_req()
+    except (openai.error.TryAgain,
+            openai.error.ServiceUnavailableError,
+            openai.error.APIError,
+            openai.error.APIConnectionError,
+            openai.error.Timeout
+           ) as err:
+        if n_trys > 5:
+            raise Exception(err)
+        else:
+            time.sleep(5)
+            res = chat_req()
+    res_time = datetime.datetime.now()
+    
+    if stream:
+        data = {
+            "generator": res,
+            "prompt_tokens": prompt_tokens,
+            "n_prompt_messages": n_prompt_messages,
+            "server_req_time": req_time,
+            "server_res_time": res_time,
+            "temperature": temperature
         }
-        
-
-    def __send_chat_req(self, msgs):
-        return openai.ChatCompletion.create(model= self.__model,
-                                                messages= msgs,
-                                                temperature= self.__temperature,
-                                                max_tokens= self.__max_generated_tokens,
-                                                presence_penalty= self.__presence_penalty,
-                                                #user= self.user_id
-                                                )
-    
-    def system_msgs(self, new_sstm_msgs):
-        if type(new_sstm_msgs) != type([]):
-            if type(new_sstm_msgs) != type(""):
-                raise Exception("Please provide a string or a list of strings")
-            new_sstm_msgs = [new_sstm_msgs]
-        [self.messages_data["system_messages"]["messages"].append(message) 
-         for message in new_sstm_msgs]
-        [self.messages_data["system_messages"]["n_tokens"].append(tokens_calc(message)) 
-         for message in new_sstm_msgs]
-
-    
-    def new_user_message(self, new_message, old_messages = None):
-        if old_messages is None:
-            old_messages = self.messages_data
-        self.messages_data = old_messages
-        messages = [{"role": "system", "content": msg} for msg in self.messages_data["system_messages"]["messages"]]
-        messages.append({"role": "user", "content":new_message})
-        
-        if self.chat:
-            additive_n_tokens = 0
-            n_returned_messages = 0
-            for i in range(len(self.messages_data["chat_messages"]["messages"])):
-                if i == 0:
-                    continue
-                if additive_n_tokens > self.__max_tokens_returned_to_model:
-                    break
-                additive_n_tokens += self.messages_data["chat_messages"]["n_tokens"][i]
-                n_returned_messages += 1
-
-            partial_messages = []
-            for i in range(n_returned_messages):
-                partial_messages.insert(0, {"role": self.messages_data["chat_messages"]["role"][i],
-                                            "content": self.messages_data["chat_messages"]["messages"][i]})
-            [messages.append(msg) for msg in partial_messages]
-        
-        
-        req_time = datetime.datetime.now()
-        response = self.__send_chat_req(messages)
-        res_time = datetime.datetime.now()
-        
-        res_message = response["choices"][0]["message"]["content"]
-        completion_tokens = response["usage"]["completion_tokens"]
-        prompt_tokens = response["usage"]["prompt_tokens"]
-        total_tokens = completion_tokens + prompt_tokens
-        
-        if self.chat:
-            self.messages_data["n_returned_messages"].insert(0, n_returned_messages)
-        else:
-            self.messages_data["n_returned_messages"].insert(0, None)
-        self.messages_data["chat_messages"]["messages"].insert(0, new_message)
-        self.messages_data["chat_messages"]["role"].insert(0, "user")
-        self.messages_data["chat_messages"]["message_time"].insert(0, req_time)
-        self.messages_data["chat_messages"]["n_tokens"].insert(0, tokens_calc(new_message))
-        self.messages_data["prompt_tokens"].insert(0, prompt_tokens)
-        
-        self.messages_data["chat_messages"]["messages"].insert(0, res_message)
-        self.messages_data["chat_messages"]["role"].insert(0, response["choices"][0]["message"]["role"])
-        self.messages_data["chat_messages"]["message_time"].insert(0, res_time)
-        self.messages_data["chat_messages"]["n_tokens"].insert(0, completion_tokens)
-        self.messages_data["completion_tokens"].insert(0, completion_tokens)
-        self.messages_data["total_tokens"].insert(0, total_tokens)
-        self.messages_data["finish_reason"].insert(0, response["choices"][0]["finish_reason"])
-        
-        return self.messages_data
-    
-class GPT_simplified(text_model_param):
-    def __init__(self, chat=True):
-        self.__initialization_time = datetime.datetime.now()
-        self.chat = chat
-        # model's parameters
-        self.__max_tokens_returned_to_model = 500
-        self.__model = "gpt-3.5-turbo"
-        self.__temperature = 1
-        self.__max_generated_tokens = 1000
-        self.__presence_penalty = 0
-        #self.user_id = "0000"
-        
-        self.messages_data = {
-            "initialization_time": self.__initialization_time,
-            "system_messages": [],
-            "messages": [], 
-            "role": [],
-            "n_tokens": [],
-            "n_returned_messages": [],
-        }
-        
-
-    def __send_chat_req(self, msgs):
-        return openai.ChatCompletion.create(model= self.__model,
-                                                messages= msgs,
-                                                temperature= self.__temperature,
-                                                max_tokens= self.__max_generated_tokens,
-                                                presence_penalty= self.__presence_penalty,
-                                                #user= self.user_id
-                                                )
-    
-    def system_msgs(self, new_sstm_msgs):
-        if type(new_sstm_msgs) != type([]):
-            if type(new_sstm_msgs) != type(""):
-                raise Exception("Please provide a string or a list of strings")
-            new_sstm_msgs = [new_sstm_msgs]
-        [self.messages_data["system_messages"]["messages"].append(message) 
-         for message in new_sstm_msgs]
-
-    
-    def new_user_message(self, new_message, old_messages = None):
-        if old_messages is None:
-            old_messages = self.messages_data
-        else:
-            self.messages_data = old_messages
-        messages = [{"role": "system", "content": msg} for msg in self.messages_data["system_messages"]]
-        
-        if self.chat:
-            additive_n_tokens = 0
-            n_returned_messages = 0
-            for i in range(len(self.messages_data["messages"])):
-                if i == 0:
-                    n_returned_messages +=1
-                    continue
-                if additive_n_tokens > self.__max_tokens_returned_to_model:
-                    break
-                additive_n_tokens += self.messages_data["n_tokens"][i]
-                n_returned_messages += 1
-
-            partial_messages = []
-            for i in range(n_returned_messages):
-                partial_messages.insert(0, {"role": self.messages_data["role"][i],
-                                            "content": self.messages_data["messages"][i]})
-            [messages.append(msg) for msg in partial_messages]
-        
-        messages.append({"role": "user", "content":new_message})
-        
-        print(messages)
-        
-        response = self.__send_chat_req(messages)
-        completion_tokens = response["usage"]["completion_tokens"]
-        
-        res_message = response["choices"][0]["message"]["content"]
-        if self.chat:
-            self.messages_data["n_returned_messages"].insert(0, n_returned_messages)
-        else:
-            self.messages_data["n_returned_messages"].insert(0, None)
-            
-        self.messages_data["messages"].insert(0, new_message)
-        self.messages_data["role"].insert(0, "user")
-        self.messages_data["n_tokens"].insert(0, tokens_calc(new_message))
-
-        
-        self.messages_data["messages"].insert(0, res_message)
-        self.messages_data["role"].insert(0, response["choices"][0]["message"]["role"])
-        self.messages_data["n_tokens"].insert(0, completion_tokens)
-
-        
-        return self.messages_data
+        return data
