@@ -20,41 +20,47 @@ def gpt3_tokens_calc(argument, chat= False, encoding = tiktoken.get_encoding("cl
         return len(tokens)
 
 def get_gpt_chat_response(msgs,
-                        user_id,
-                        model = "gpt-3.5-turbo",
-                        temperature = 1,  
-                        stream = True,
-                        max_tokens = 500):
+                          user_id,
+                          model = "gpt-3.5-turbo",
+                          temperature = 1,  
+                          stream = True,
+                          max_tokens = 500
+                         ):
     
     max_prompt_tokens = 500
     prompt_tokens = 0
     chat_msg_returned = False
-    msgs = []
+    messages = []
     for msg, role in msgs:
         if role == "system":
-            msgs.insert(0, {"role": role, "content": msg})
+            messages.insert(0, {"role": role, "content": msg})
         if role == "assistant":
             if not chat_msg_returned:
-                msgs.insert(1, {"role": role, "content": msg})
+                messages.insert(1, {"role": role, "content": msg})
                 chat_msg_returned = True
         if role == "user":
-            msgs.insert(1, {"role": role, "content": msg})
-        prompt_tokens = gpt3_tokens_calc(msgs, chat= True)
-        if prompt_tokens >= max_tokens_returned_to_model:
+            messages.insert(1, {"role": role, "content": msg})
+        prompt_tokens = gpt3_tokens_calc(messages, chat= True)
+        if prompt_tokens >= max_prompt_tokens:
             break
-    n_prompt_messages = len(msgs)
+            
+    n_prompt_messages = len(messages)
+    
+    print(msgs)
     
     def chat_req():
-        n_trys += 1
+        try:
+            n_trys += 1
+        except NameError:
+            n_trys = 1
         return openai.ChatCompletion.create(model = model,
-                                            messages = msgs,
+                                            messages = messages,
                                             temperature = temperature,
                                             max_tokens = max_tokens,
                                             stream = stream,
                                             user = user_id,
                                            )
     
-    n_trys = 0
     req_time = datetime.datetime.now()
     try:
         res = chat_req()
@@ -80,4 +86,4 @@ def get_gpt_chat_response(msgs,
             "server_res_time": res_time,
             "temperature": temperature
         }
-        return data
+        return data  
