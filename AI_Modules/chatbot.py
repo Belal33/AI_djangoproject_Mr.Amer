@@ -74,6 +74,7 @@ def get_gpt_chat_response(msgs,
                 raise Exception(err)
             continue
 
-e = get_gpt_chat_response([{"role": "user", "content": "hi"}])
-for m in e:
-    print(m)
+def transcripe(path):
+    audio_file = open(path, "rb")
+    res = openai.Audio.transcribe("whisper-1", audio_file)
+    return res.text
