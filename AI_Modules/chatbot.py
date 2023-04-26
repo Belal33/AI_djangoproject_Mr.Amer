@@ -28,9 +28,6 @@ def prepare_msgs(msgs):  # sourcery skip: merge-nested-ifs, switch
     messages = []
     for role, msg in msgs:
         if role == "system":
-            if gpt3_tokens_calc(msg) > 100:
-                raise Exception(
-                    f"system messages can't contain more than 100 tokens\ncurrent message contain {gpt3_tokens_calc(msg)} tokens")
             messages.append({"role": role, "content": msg})
     q = len(messages)
     for role, msg in msgs:
