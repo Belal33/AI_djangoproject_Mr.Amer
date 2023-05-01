@@ -86,6 +86,6 @@ def transcripe(path):
     duration = size / 128_000 * 8
     audio_file = open(path, "rb")
     res = openai.Audio.transcribe("whisper-1", audio_file)
-    return {"text": res.text, "duration": duration}
+    return {"text": res.text, "duration": round(duration)}
 
 print(transcripe('hameed.webm'))
