@@ -1,6 +1,6 @@
 import openai
 import tiktoken
-
+from os import stat
 
 def gpt3_tokens_calc(argument, chat=False, encoding=tiktoken.get_encoding("cl100k_base")):
     # sourcery skip: remove-redundant-if
@@ -82,23 +82,10 @@ def get_gpt_chat_response(messages,
 
 
 def transcripe(path):
+    size = stat(path).st_size
+    duration = size / 128_000 * 8
     audio_file = open(path, "rb")
     res = openai.Audio.transcribe("whisper-1", audio_file)
-    return res.text
+    return {"text": res.text, "duration": duration}
 
-
-msg = prepare_msgs([
-    ("system", "1"),
-    ("system", "2"),
-    ("user", "8  "),
-    ("assistant", "7"),
-    ("user", "6"),
-    ("assistant", "5"),
-    ("user", "4"),
-    ("assistant", "3")
-])
-
-for i in get_gpt_chat_response(msg, "0"):
-    print(i.choices[0].delta)
-
-print(msg)
+print(transcripe('hameed.webm'))
